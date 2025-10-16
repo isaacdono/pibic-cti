@@ -20,7 +20,7 @@ import speech_recognition as sr
 from dotenv import load_dotenv
 
 # Define a variável de ambiente para que o phonemizer encontre a DLL (ainda necessário!)
-os.environ['PHONEMIZER_ESPEAK_LIBRARY'] = "C:/Program Files/eSpeak NG/espeak-ng.dll"
+os.environ['PHONEMIZER_ESPEAK_LIBRARY'] = "C:/Program Files/eSpeak NG/libespeak-ng.dll"
 
 from kokoro import KPipeline
 
@@ -56,8 +56,8 @@ SYSTEM_MSG = (
 )
 
 # ---------------------- Config TTS (Kokoro) ----------------------
-KOKORO_LANG = "p"          # pt-BR
-KOKORO_VOICE = "pf_dora"   # pf_dora | pm_alex | pm_santa
+KOKORO_LANG = "a"          # pt-BR
+KOKORO_VOICE = "af_heart"   # pf_dora | pm_alex | pm_santa
 KOKORO_SPEED = 1.3
 KOKORO_SR = 24000
 
@@ -65,7 +65,7 @@ KOKORO_SR = 24000
 LISTEN_TIMEOUT = 3.0
 PHRASE_TIME_LIMIT = 5.0
 PAUSE_THRESHOLD = 0.5
-ENERGY_BOOST = 300  # suba para 400–600.
+ENERGY_BOOST = 50  # suba para 400–600.
 
 # ---------------------- Flags globais ----------------------
 _stop_playback = threading.Event()
@@ -258,7 +258,7 @@ def _stt_with_faster_whisper(audio_data: sr.AudioData) -> str:
         wav_path = alt_path
 
     segments, _info = _faster_model.transcribe(
-        wav_path, language="pt", vad_filter=True, vad_parameters=dict(min_silence_duration_ms=300)
+        wav_path, language="en", vad_filter=True, vad_parameters=dict(min_silence_duration_ms=300)
     )
     return " ".join(seg.text.strip() for seg in segments).strip()
 
@@ -276,7 +276,7 @@ def listen_once() -> str:
             text = _stt_with_faster_whisper(audio_data)
         else:
             text = _recognizer.recognize_whisper(
-                audio_data, model="small", language="pt")
+                audio_data, model="small", language="en")
         return (text or "").strip()
     except sr.UnknownValueError:
         return ""
