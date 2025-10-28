@@ -3,6 +3,11 @@
 ### Meta
 Robô navega, reage a pessoas e **descreve o que vê** (VLM) sob demanda.
 
+### Utilidades
+https://docs.langchain.com/oss/python/integrations/chat
+source /opt/ros/jazzy/setup.bash
+https://console.groq.com/docs/model/meta-llama/llama-4-scout-17b-16e-instruct 
+
 ### Planejamento
 
 1.  **Cérebro (LangGraph Puro, Mockado):**
