@@ -4,13 +4,20 @@ from rclpy.node import Node
 from std_msgs.msg import String
 import threading
 import speech_recognition as sr
-import pyttsx3
+import sounddevice as sd
+import numpy as np
+from kokoro import KPipeline
+import warnings
 import time
 import os
+import torch
 
+warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"
 os.environ["ALSA_CARD"] = "default"
 
+KOKORO_VOICE = "pf_dora"  # voz PT-BR
+KOKORO_SPEED = 1.3       # velocidade da fala
 
 class Talk_Node(Node):
     def __init__(self):
@@ -25,8 +32,9 @@ class Talk_Node(Node):
         # --- STT / TTS Setup ---
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
-        self.tts_engine = pyttsx3.init()
-        self.get_logger().info("Nó Fala iniciado (STT + TTS).")
+        self.tts_pipeline = KPipeline(lang_code="p", repo_id="hexgrad/Kokoro-82M")
+
+        self.get_logger().info("Nó Fala iniciado (STT + TTS com Kokoro).")
 
         # --- Ajuste de ruído ambiente ---
         with self.microphone as source:
@@ -45,7 +53,7 @@ class Talk_Node(Node):
                     audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=8)
                 self.get_logger().info("Reconhecendo fala...")
 
-                # Usa o reconhecimento padrão (Google Web Speech API)
+                # Google Web Speech API em PT-BR
                 text = self.recognizer.recognize_google(audio, language="pt-BR")
 
                 if text.strip():
@@ -55,7 +63,7 @@ class Talk_Node(Node):
                     self.get_logger().info(f"[STT] Você disse: {text.strip()}")
 
             except sr.WaitTimeoutError:
-                continue  # Nenhum som detectado
+                continue
             except sr.UnknownValueError:
                 self.get_logger().warn("Não entendi o que foi dito.")
             except Exception as e:
@@ -70,11 +78,17 @@ class Talk_Node(Node):
         self.get_logger().info(f"[TTS] Falando: {text}")
         threading.Thread(target=self.speak, args=(text,), daemon=True).start()
 
-    # --- Execução do TTS (não bloqueante) ---
+    # --- Execução do TTS Kokoro (bloqueante) ---
     def speak(self, text: str):
         try:
-            self.tts_engine.say(text)
-            self.tts_engine.runAndWait()
+            gen = self.tts_pipeline(text, voice=KOKORO_VOICE, speed=KOKORO_SPEED)
+            for _, _, chunk in gen:
+                if chunk is None or len(chunk) == 0:
+                    continue
+                else:
+                    audio_np = chunk.cpu().numpy().astype("float32")
+                    sd.play(audio_np, 24000, blocking=True)
+
         except Exception as e:
             self.get_logger().error(f"Erro no TTS: {e}")
 
@@ -83,7 +97,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = Talk_Node()
     try:
-        rclpy.spin(node)  # mantém o nó ativo (para callbacks do ROS)
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
