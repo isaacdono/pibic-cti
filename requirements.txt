@@ -1,0 +1,10 @@
+langchain
+langchain-community
+ollama
+pyttsx3
+speechrecognition
+pyaudio
+langchain-core
+vosk
+sounddevice
+numpy
