@@ -4,100 +4,93 @@ import os
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from langchain_ollama import ChatOllama
-from langchain_core.messages import SystemMessage, HumanMessage
 import threading
-from collections import deque
+from dotenv import load_dotenv
 
-# --- Configurações ---
-SYSTEM_PROMPT = os.getenv("ROBOT_SYSTEM_PROMPT", (
-    "Você é Sandra, uma recepcionista virtual amigável e prestativa. "
-    "Você percebe o ambiente ao seu redor e pode comentar sobre o que vê. "
-    "Responda em português (pt-BR) de forma concisa e educada, sem emojis."
-))
-PROMPT_TEMPLATE = (
-    "Contexto recente:\n{context}\n\n"
-    "Instrução: Responda ao usuário abaixo, considerando o contexto e o que foi percebido pelo sistema de visão.\n\n"
-    "Usuário: {user_input}\n\n"
-    "Se for apenas cumprimento, responda curto. Se for algo relacionado à visão, comente brevemente o que viu."
+# LangChain
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+from tools import google_serper_search  # nossa tool Serper
+
+load_dotenv(override=True)
+
+SYSTEM_PROMPT = os.getenv(
+    "ROBOT_SYSTEM_PROMPT",
+    "Você é Sandra, uma recepcionista virtual amigável e prestativa. Responda em português (pt-BR) de forma concisa e educada. Não use emojis em suas repostas."
 )
-
-MAX_HISTORY = 6
 
 class Think_Node(Node):
     def __init__(self):
         super().__init__('think_node')
 
-        # --- ROS Subscriptions / Publications ---
-        self.subscription_stt = self.create_subscription(String, '/transcript', self.callback_stt, 10)
-        self.subscription_vision = self.create_subscription(String, '/detected_objects', self.callback_vision, 10)
-        self.publisher_tts = self.create_publisher(String, '/tts_command', 10)
+        # ROS
+        self.sub_stt = self.create_subscription(String, '/transcript', self.callback_stt, 10)
+        self.sub_vision = self.create_subscription(String, '/detected_objects', self.callback_vision, 10)
+        self.pub_tts = self.create_publisher(String, '/tts_command', 10)
 
-        # --- Modelo ---
-        self.llm = ChatOllama(model="gemma3:1b", temperature=0)
-        self.get_logger().info("Nó Think iniciado — ouvindo /transcript e /detected_objects.")
-
-        # --- Estado ---
-        self.history = deque(maxlen=MAX_HISTORY * 2)
+        # estado local
         self.lock = threading.Lock()
         self.last_seen_object = None
 
-    # --- Callback: Fala do usuário ---
-    def callback_stt(self, msg: String):
-        user_text = msg.data.strip()
-        if not user_text:
-            return
-        self.get_logger().info(f"[CÉREBRO] Usuário: {user_text}")
-        threading.Thread(target=self.process_input, args=(user_text,), daemon=True).start()
+        # LLM + agent (create_agent com checkpointer)
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+        tools = [google_serper_search]
+        self.checkpointer = InMemorySaver()
+        self.agent = create_agent(self.llm, tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 
-    # --- Callback: Dados de visão ---
+        self.get_logger().info("Think_Node iniciado com create_agent.")
+
+    def callback_stt(self, msg: String):
+        text = msg.data.strip()
+        if not text:
+            return
+        self.get_logger().info(f"[CÉREBRO] Usuário: {text}")
+        threading.Thread(target=self.process_input, args=(text,), daemon=True).start()
+
     def callback_vision(self, msg: String):
         detected = msg.data.strip()
         if not detected:
             return
         with self.lock:
             self.last_seen_object = detected
-            self.history.append(("vision", f"O sistema de visão detectou: {detected}"))
-        # self.get_logger().info(f"[VISÃO] Detectado: {detected}")
+        # self.get_logger().info(f"[VISÃO] {detected}")
 
-    # --- Constrói o contexto completo ---
-    def build_context(self):
-        parts = []
-        for role, content in list(self.history):
-            if role == "user":
-                parts.append(f"Usuário: {content}")
-            elif role == "assistant":
-                parts.append(f"Sandra: {content}")
-            elif role == "vision":
-                parts.append(f"[Percepção Visual] {content}")
-        return "\n".join(parts) if parts else "Nenhum contexto prévio."
-
-    # --- Gera resposta LLM ---
-    def process_input(self, text: str):
+    def process_input(self, user_text: str):
+        # consome contexto de visão
         with self.lock:
-            self.history.append(("user", text))
-            context = self.build_context()
-            prompt = PROMPT_TEMPLATE.format(context=context, user_input=text)
+            vision = self.last_seen_object
+            self.last_seen_object = None
+
+        # monta mensagens
+        messages = []
+        if vision:
+            messages.append({"role": "user", "content": f"[Visão detectou: {vision}]\n\n{user_text}"})
+        else:
+            messages.append({"role": "user", "content": user_text})
 
         try:
-            self.get_logger().info("Gerando resposta com LLM...")
-            resp = self.llm.invoke([SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=prompt)])
-            reply = getattr(resp, "content", str(resp)).strip()
+            result = self.agent.invoke(
+                {"messages": messages},
+                config={"configurable": {"thread_id": "main"}}
+            )
 
-            with self.lock:
-                self.history.append(("assistant", reply))
+            # Corrige aqui: pega a resposta textual
+            ai_msgs = [m for m in result["messages"] if m.type == "ai"]
+            reply = ai_msgs[-1].content if ai_msgs else "Desculpe, não consegui formar uma resposta."
 
-            # Publica fala
             msg = String()
             msg.data = reply
-            self.publisher_tts.publish(msg)
+            self.pub_tts.publish(msg)
             self.get_logger().info(f"[CÉREBRO] -> /tts_command: {reply[:200]}")
 
         except Exception as e:
-            self.get_logger().error(f"Erro no LLM: {e}")
-            msg = String()
-            msg.data = "Desculpe, ocorreu um erro ao processar sua solicitação."
-            self.publisher_tts.publish(msg)
+            self.get_logger().error(f"Erro no agent.invoke: {e}")
+            err = String()
+            err.data = "Desculpe, ocorreu um erro ao processar sua solicitação."
+            self.pub_tts.publish(err)
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -109,6 +102,7 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

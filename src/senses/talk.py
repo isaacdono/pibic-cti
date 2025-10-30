@@ -39,7 +39,7 @@ class Talk_Node(Node):
         # --- Ajuste de ruído ambiente ---
         with self.microphone as source:
             self.get_logger().info("Calibrando microfone (1s)...")
-            self.recognizer.adjust_for_ambient_noise(source, duration=1.0)
+            self.recognizer.adjust_for_ambient_noise(source, duration=2.0)
 
         # --- Inicia Threads ---
         threading.Thread(target=self.listen_loop, daemon=True).start()
