@@ -51,7 +51,7 @@ class Talk_Node(Node):
                 with self.microphone as source:
                     self.get_logger().info("Ouvindo...")
                     audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=8)
-                self.get_logger().info("Reconhecendo fala...")
+                # self.get_logger().info("Reconhecendo fala...")
 
                 # Google Web Speech API em PT-BR
                 text = self.recognizer.recognize_google(audio, language="pt-BR")
@@ -65,7 +65,8 @@ class Talk_Node(Node):
             except sr.WaitTimeoutError:
                 continue
             except sr.UnknownValueError:
-                self.get_logger().warn("Não entendi o que foi dito.")
+                # self.get_logger().warn("Não entendi o que foi dito.")
+                continue
             except Exception as e:
                 self.get_logger().error(f"Erro no STT: {e}")
                 time.sleep(1)

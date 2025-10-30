@@ -38,6 +38,7 @@ dependencies = [
     "speechrecognition>=3.14.3",
     "torch>=2.9.0",
     "transformers>=4.57.1",
+    "ultralytics>=8.3.222",
     "vosk>=0.3.45",
     "whisper>=1.1.10",
 ]
