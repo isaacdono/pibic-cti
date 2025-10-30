@@ -1,3 +1,15 @@
+# Possíveis mudanças
+
+# STT Node: lê o microfone continuamente, publica /transcript.
+# Think Node: lê /transcript, gera resposta, publica /tts_command.
+# TTS Node: lê /tts_command e fala (bloqueante é ok).
+# Não há necessidade de threads extras para TTS ou STT se cada um estiver isolado em seu nó. Isso mantém tudo simples e linear
+
+# Depois de testar com dois nós na fala (removendo threads dos .py), pode-se tentar fazer o stream da llm e o stream da kokoro (blocking=False), talvez fique mais rápido o processo todo.
+
+
+
+
 # -*- coding: utf-8 -*-
 import rclpy
 from rclpy.node import Node
