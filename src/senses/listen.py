@@ -4,12 +4,15 @@ from rclpy.node import Node
 from std_msgs.msg import String
 import threading
 import speech_recognition as sr
+import sounddevice as sd
 import os
 import time
 import warnings
 
 # (Opcional, mas recomendado)
 warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 os.environ["PYTHONWARNINGS"] = "ignore"
 # os.environ["ALSA_CARD"] = "default"
 
@@ -18,7 +21,9 @@ class STT_Node(Node):
         super().__init__('stt_node')
         self.publisher_ = self.create_publisher(String, '/transcript', 10)
         
+        # O sounddevice consegue limpar erros ALSA automaticamente
         self.get_logger().info("Nó STT (Ouvido) iniciado.")
+        sd.query_devices()  
 
         try:
             self.recognizer = sr.Recognizer()
