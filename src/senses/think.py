@@ -11,8 +11,7 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_google_genai import ChatGoogleGenerativeAI
-
-from tools import google_serper_search  # nossa tool Serper
+from src.graph.tools import all_tools
 
 load_dotenv(override=True)
 
@@ -36,7 +35,7 @@ class Think_Node(Node):
 
         # LLM + agent (create_agent com checkpointer)
         self.llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
-        tools = [google_serper_search]
+        tools = all_tools
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 
