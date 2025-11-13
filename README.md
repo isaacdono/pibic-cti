@@ -20,6 +20,14 @@ A tecnologia desenvolvida é aplicável em saúde, educação, pesquisa, indúst
 
 A ser redigido.
 
+## Uso
+
+Abra quatro terminais, dois para o CoppeliaSim e dois para LangChain.  
+Em todos, ative o respectivo venv (uv) e faça o source do ROS2.  
+Para abrir o CoppeliaSim, execute `./coppeliaSim`.  
+Para executar a aplicação, faça: `uv run -m src.senses.think`, por exemplo.  
+
+
 ## Contribuição e Licença
 
 Este projeto é construído pela comunidade. Leia nosso **[Guia de Contribuição](./CONTRIBUTING.md)** para mais detalhes.

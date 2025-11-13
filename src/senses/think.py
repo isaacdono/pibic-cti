@@ -33,8 +33,24 @@ class Think_Node(Node):
         self.lock = threading.Lock()
         self.last_seen_object = None
 
+
+# import time
+# from google.api_core.exceptions import ResourceExhausted
+
+# def call_llm_safe(prompt, retries=5):
+#     for attempt in range(retries):
+#         try:
+#             return llm.invoke(prompt)
+#         except ResourceExhausted:
+#             wait = 2 ** attempt
+#             print(f"[WARN] LLM saturada, tentando novamente em {wait}s...")
+#             time.sleep(wait)
+#     print("[ERRO] Não foi possível contatar a LLM após várias tentativas.")
+#     return None
+
+
         # LLM + agent (create_agent com checkpointer)
-        self.llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
         tools = all_tools
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
