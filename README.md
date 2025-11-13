@@ -22,7 +22,7 @@ A ser redigido.
 
 ## Uso
 
-Abra quatro terminais, dois para o CoppeliaSim e dois para LangChain.  
+Abra os terminais para o CoppeliaSim e para o LangChain.  
 Em todos, ative o respectivo venv (uv) e faça o source do ROS2.  
 Para abrir o CoppeliaSim, execute `./coppeliaSim`.  
 Para executar a aplicação, faça: `uv run -m src.senses.think`, por exemplo.  
