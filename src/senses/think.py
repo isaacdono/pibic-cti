@@ -6,14 +6,15 @@ from rclpy.node import Node
 from std_msgs.msg import String
 import threading
 from dotenv import load_dotenv
-import base64 # Import para codificar a imagem
+import base64
+import time # Importar time
 
 # LangChain
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain_google_genai import ChatGoogleGenerativeAI
 from src.graph.tools import all_tools
-from src.graph.tools.others import get_current_view # Importa a ferramenta para chamada direta
+from src.graph.tools.others import get_current_view
 
 load_dotenv(override=True)
 
@@ -34,7 +35,7 @@ class Think_Node(Node):
         self.pub_tts = self.create_publisher(String, '/tts_command', 10)
 
         # LLM + agent
-        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, all_tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 
@@ -50,7 +51,7 @@ class Think_Node(Node):
         messages = [{"role": "user", "content": user_text}]
 
         try:
-            # 1. Primeira Invocação: LLM decide se usa uma ferramenta
+            # 1. Primeira Invocação
             result = self.agent.invoke(
                 {"messages": messages},
                 config={"configurable": {"thread_id": "main"}}
@@ -61,38 +62,32 @@ class Think_Node(Node):
             if last_message.tool_calls and any(tc["name"] == "get_current_view" for tc in last_message.tool_calls):
                 self.get_logger().info("Agente solicitou 'get_current_view'. Executando manualmente.")
                 
-                # Executa a ferramenta para obter os bytes da imagem
-                image_bytes = get_current_view.invoke({})
+                # --- INÍCIO DA CORREÇÃO ---
+                # Passa um timestamp como argumento para evitar o cache.
+                tool_input = {"cache_buster": str(time.time())}
+                image_bytes = get_current_view.invoke(tool_input)
+                # --- FIM DA CORREÇÃO ---
                 
                 tool_messages = []
                 if isinstance(image_bytes, bytes):
-                    # Codifica a imagem em base64, como no exemplo
                     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
                     
-                    # Constrói a mensagem multimodal para a LLM
                     tool_content = [
                         {"type": "text", "text": "A imagem foi capturada com sucesso. Por favor, descreva-a."},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
-                        },
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
                     ]
                     
-                    # Adiciona à lista de mensagens da ferramenta
                     tool_messages.append({
-                        "type": "tool",
-                        "name": "get_current_view",
-                        "content": tool_content,
-                        "tool_call_id": last_message.tool_calls[0]["id"], # Assumindo uma chamada de ferramenta
+                        "type": "tool", "name": "get_current_view", "content": tool_content,
+                        "tool_call_id": last_message.tool_calls[0]["id"],
                     })
                 else:
-                    # Caso a ferramenta retorne um erro (string)
                     tool_messages.append({
                         "type": "tool", "name": "get_current_view", "content": image_bytes,
                         "tool_call_id": last_message.tool_calls[0]["id"],
                     })
 
-                # 3. Segunda Invocação: Envia o resultado da ferramenta (com a imagem) de volta
+                # 3. Segunda Invocação
                 if tool_messages:
                     messages_with_tool_results = result["messages"] + tool_messages
                     result = self.agent.invoke(
@@ -104,16 +99,11 @@ class Think_Node(Node):
             ai_msgs = [m for m in result["messages"] if m.type == "ai"]
             reply_content = ai_msgs[-1].content if ai_msgs else "Desculpe, não consegui formar uma resposta."
 
-            # --- INÍCIO DA CORREÇÃO ---
-            # Verifica se o conteúdo é uma lista (resposta multimodal) ou uma string simples.
             if isinstance(reply_content, list):
-                # Filtra e junta todas as partes de texto da resposta.
                 text_parts = [part["text"] for part in reply_content if isinstance(part, dict) and part.get("type") == "text"]
                 reply = " ".join(text_parts)
             else:
-                # Se for uma string simples, usa diretamente.
                 reply = reply_content
-            # --- FIM DA CORREÇÃO ---
 
             msg = String()
             msg.data = reply

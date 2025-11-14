@@ -11,15 +11,9 @@ class VisionSaverNode(Node):
         self.subscription = self.create_subscription(
             Image, '/image', self.callback, 10)
         
-        # Constrói o caminho para a pasta 'temp'
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        project_root = os.path.dirname(os.path.dirname(script_dir))
-        output_dir = os.path.join(project_root, "temp")
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Define o caminho do arquivo final e do arquivo temporário
-        self.final_file_path = os.path.join(output_dir, "robot_latest_view.jpg")
-        self.temp_file_path = os.path.join(output_dir, "robot_latest_view.jpg.tmp")
+        # Usa um caminho absoluto e fixo para consistência
+        self.final_file_path = "/tmp/robot_latest_view.jpg"
+        self.temp_file_path = "/tmp/robot_latest_view.jpg.tmp"
         
         self.get_logger().info(f"Salvando frames em: {self.final_file_path}")
 
