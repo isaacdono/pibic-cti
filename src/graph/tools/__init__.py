@@ -13,6 +13,8 @@ from . import calculation
 from . import external
 from . import log
 from . import ros2
+from . import others
+
 
 # --- 2. Liste os Módulos Importados ---
 # (Isso nos permite iterar sobre eles)
@@ -21,6 +23,7 @@ _tool_modules = [
     external,
     log,
     ros2,
+    others,
 ]
 
 def load_all_tools():

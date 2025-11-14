@@ -15,10 +15,12 @@ from src.graph.tools import all_tools
 
 load_dotenv(override=True)
 
-SYSTEM_PROMPT = os.getenv(
-    "ROBOT_SYSTEM_PROMPT",
-    "Você é Sandra, uma recepcionista virtual amigável e prestativa. Responda em português (pt-BR) de forma concisa e educada. Não use emojis em suas repostas."
-)
+SYSTEM_PROMPT = """
+Você é uma robô inteligente chamada Sandra, parte do CTI Renato Archer.
+Você recebe comandos de voz do usuário, processa-os e responde de forma adequada.
+Use as ferramentas disponíveis para ajudá-la a responder.
+Responda de forma concisa e direta, não use emojis
+"""
 
 class Think_Node(Node):
     def __init__(self):
@@ -26,28 +28,7 @@ class Think_Node(Node):
 
         # ROS
         self.sub_stt = self.create_subscription(String, '/transcript', self.callback_stt, 10)
-        self.sub_vision = self.create_subscription(String, '/detected_objects', self.callback_vision, 10)
         self.pub_tts = self.create_publisher(String, '/tts_command', 10)
-
-        # estado local
-        self.lock = threading.Lock()
-        self.last_seen_object = None
-
-
-# import time
-# from google.api_core.exceptions import ResourceExhausted
-
-# def call_llm_safe(prompt, retries=5):
-#     for attempt in range(retries):
-#         try:
-#             return llm.invoke(prompt)
-#         except ResourceExhausted:
-#             wait = 2 ** attempt
-#             print(f"[WARN] LLM saturada, tentando novamente em {wait}s...")
-#             time.sleep(wait)
-#     print("[ERRO] Não foi possível contatar a LLM após várias tentativas.")
-#     return None
-
 
         # LLM + agent (create_agent com checkpointer)
         self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
@@ -64,26 +45,9 @@ class Think_Node(Node):
         self.get_logger().info(f"[CÉREBRO] Usuário: {text}")
         threading.Thread(target=self.process_input, args=(text,), daemon=True).start()
 
-    def callback_vision(self, msg: String):
-        detected = msg.data.strip()
-        if not detected:
-            return
-        with self.lock:
-            self.last_seen_object = detected
-        # self.get_logger().info(f"[VISÃO] {detected}")
-
     def process_input(self, user_text: str):
-        # consome contexto de visão
-        with self.lock:
-            vision = self.last_seen_object
-            self.last_seen_object = None
-
         # monta mensagens
-        messages = []
-        if vision:
-            messages.append({"role": "user", "content": f"[Visão detectou: {vision}]\n\n{user_text}"})
-        else:
-            messages.append({"role": "user", "content": user_text})
+        messages = [{"role": "user", "content": user_text}]
 
         try:
             result = self.agent.invoke(
@@ -98,7 +62,7 @@ class Think_Node(Node):
             msg = String()
             msg.data = reply
             self.pub_tts.publish(msg)
-            self.get_logger().info(f"[CÉREBRO] -> /tts_command: {reply[:200]}")
+            self.get_logger().info(f"[CÉREBRO] -> /tts_command: {reply}")
 
         except Exception as e:
             self.get_logger().error(f"Erro no agent.invoke: {e}")
