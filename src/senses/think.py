@@ -19,10 +19,9 @@ from src.graph.tools.others import get_current_view
 load_dotenv(override=True)
 
 SYSTEM_PROMPT = """
-Você é uma robô inteligente chamada Sandra, parte do CTI Renato Archer.
+Você é uma robô ROS2 inteligente chamada Sandra, parte do CTI Renato Archer.
 Você recebe comandos de voz do usuário, processa-os e responde de forma adequada.
 Use as ferramentas disponíveis para ajudá-la a responder.
-Quando o usuário pedir para descrever a visão, use a ferramenta 'get_current_view'. Você receberá uma imagem como resultado, analise-a para responder.
 Responda de forma concisa e direta, não use emojis.
 """
 
@@ -35,7 +34,7 @@ class Think_Node(Node):
         self.pub_tts = self.create_publisher(String, '/tts_command', 10)
 
         # LLM + agent
-        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, all_tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 

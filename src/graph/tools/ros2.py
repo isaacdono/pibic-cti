@@ -425,3 +425,21 @@ def roslog_list(min_size: int = 2048, blacklist: Optional[List[str]] = None) -> 
         total=len(logs),
         logs=logs,
     )
+
+
+@tool
+def ros2_topic_pub(topic: str, msg_type: str, message: str, rate: float = 1.0, count: int = 1) -> dict:
+    """
+    Publish a message to a ROS2 topic.
+
+    :param topic: The name of the ROS2 topic to publish to.
+    :param msg_type: The message type (e.g., 'std_msgs/String').
+    :param message: The message data to publish.
+    :param rate: The rate at which to publish messages (Hz). Default is 1.0.
+    :param count: The number of messages to publish. Default is 1.
+    """
+    cmd = f'ros2 topic pub --rate {rate} --times {count} {topic} {msg_type} "{message}"'
+    success, output = execute_ros_command(cmd)
+    if not success:
+        return {"error": output}
+    return {"success": True, "output": output}
