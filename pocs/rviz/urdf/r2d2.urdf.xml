@@ -1,213 +1,229 @@
+<?xml version="1.0"?>
 <robot name="r2d2">
 
-  <link name="axis">
-    <visual>
-      <origin xyz="0 0 0" rpy="1.57 0 0" />
-      <geometry>
-        <cylinder radius="0.01" length=".5" />
-      </geometry>
-      <material name="gray">
-        <color rgba=".2 .2 .2 1" />
-      </material>
-    </visual>
+  <material name="blue">
+    <color rgba="0 0 0.8 1"/>
+  </material>
+  <material name="white">
+    <color rgba="1 1 1 1"/>
+  </material>
+  <material name="red">
+    <color rgba="1 0 0 1"/>
+  </material>
+  <material name="black">
+    <color rgba="0 0 0 1"/>
+  </material>
 
-    <collision>
-      <origin xyz="0 0 0" rpy="1.57 0 0" />
-      <geometry>
-        <cylinder radius="0.01" length=".5" />
-      </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
-    </collision>
-  </link>
+  <link name="base_footprint"/>
 
-  <link name="leg1">
-    <inertial>
-      <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
-    </inertial>
-
-    <visual>
-      <origin xyz="0 0 -.3" />
-      <geometry>
-        <box size=".20 .10 .8" />
-      </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
-    </visual>
-
-    <collision>
-      <origin xyz="0 0 -.3" />
-      <geometry>
-        <box size=".20 .10 .8" />
-      </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
-    </collision>
-  </link>
-
-  <joint name="leg1connect" type="fixed">
-    <origin xyz="0 .30 0" />
-    <parent link="axis"/>
-    <child link="leg1"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.3" rpy="0 0 0"/>
   </joint>
 
-  <link name="leg2">
-    <inertial>
-      <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
-    </inertial>
-
+  <link name="base_link">
     <visual>
-      <origin xyz="0 0 -.3" />
       <geometry>
-        <box size=".20 .10 .8" />
+        <cylinder length="0.6" radius="0.2"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
+      <material name="blue"/>
     </visual>
-
     <collision>
-      <origin xyz="0 0 -.3" />
       <geometry>
-        <box size=".20 .10 .8" />
+        <cylinder length="0.6" radius="0.2"/>
       </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
     </collision>
+    <inertial>
+      <mass value="10"/>
+      <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+    </inertial>
   </link>
 
-  <joint name="leg2connect" type="fixed">
-    <origin xyz="0 -.30 0" />
-    <parent link="axis"/>
-    <child link="leg2"/>
+  <link name="left_wheel">
+    <visual>
+      <geometry>
+        <cylinder length="0.04" radius="0.1"/>
+      </geometry>
+      <origin rpy="1.57075 0 0" xyz="0 0 0"/>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.04" radius="0.1"/>
+      </geometry>
+      <origin rpy="1.57075 0 0" xyz="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="0 0.22 -0.25" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
-  <link name="body">
-    <inertial>
-      <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
-    </inertial>
-
+  <link name="right_wheel">
     <visual>
-      <origin xyz="0 0 -0.2" />
       <geometry>
-        <cylinder radius=".20" length=".6"/>
+        <cylinder length="0.04" radius="0.1"/>
+      </geometry>
+      <origin rpy="1.57075 0 0" xyz="0 0 0"/>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.04" radius="0.1"/>
+      </geometry>
+      <origin rpy="1.57075 0 0" xyz="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0 -0.22 -0.25" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="caster">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
       </geometry>
       <material name="white"/>
     </visual>
-
     <collision>
-      <origin xyz="0 0 0.2" />
       <geometry>
-        <cylinder radius=".20" length=".6"/>
+        <sphere radius="0.05"/>
       </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
     </collision>
-  </link>
-
-  <joint name="tilt" type="revolute">
-    <parent link="axis"/>
-    <child link="body"/>
-    <origin xyz="0 0 0" rpy="0 0 0" />
-    <axis xyz="0 1 0" />
-    <limit upper="0" lower="-.5" effort="10" velocity="10" />
-  </joint>
-
-  <link name="head">
     <inertial>
       <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
     </inertial>
-
-    <visual>
-      <geometry>
-        <sphere radius=".4" />
-      </geometry>
-      <material name="white" />
-    </visual>
-
-    <collision>
-      <origin/>
-      <geometry>
-        <sphere radius=".4" />
-      </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
-    </collision>
   </link>
 
-  <joint name="swivel" type="continuous">
-    <origin xyz="0 0 0.1" />
-    <axis xyz="0 0 1" />
-    <parent link="body"/>
-    <child link="head"/>
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster"/>
+    <origin xyz="0.15 0 -0.3" rpy="0 0 0"/>
   </joint>
 
-  <link name="rod">
-    <inertial>
-      <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
-    </inertial>
-
-    <visual>
-      <origin xyz="0 0 -.1" />
-      <geometry>
-        <cylinder radius=".02" length=".2" />
-      </geometry>
-      <material name="gray" />
-
-    </visual>
-
-    <collision>
-      <origin/>
-      <geometry>
-        <cylinder radius=".02" length=".2" />
-      </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
-    </collision>
-  </link>
-
-  <joint name="periscope" type="prismatic">
-    <origin xyz=".12 0 .15" />
-    <axis xyz="0 0 1" />
-    <limit upper="0" lower="-.5" effort="10" velocity="10" />
-    <parent link="head"/>
-    <child link="rod"/>
-  </joint>
-
-  <link name="box">
-    <inertial>
-      <mass value="1"/>
-      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
-      <origin/>
-    </inertial>
-
+  <link name="laser_link">
     <visual>
       <geometry>
-        <box size=".05 .05 .05" />
+        <box size="0.1 0.1 0.1"/>
       </geometry>
-      <material name="blue" >
-        <color rgba="0 0 1 1" />
+      <material name="red">
+        <color rgba="1 0 0 1"/> 
       </material>
     </visual>
-
-    <collision>
-      <origin/>
-      <geometry>
-        <box size=".05 .05 .05" />
-      </geometry>
-      <contact_coefficients mu="0" kp="1000.0" kd="1.0"/>
-    </collision>
   </link>
 
-  <joint name="boxconnect" type="fixed">
-    <origin xyz="0 0 0" />
-    <parent link="rod"/>
-    <child link="box"/>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_link"/>
+    <origin xyz="0 0 0.35" rpy="0 0 0"/>
   </joint>
+
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.2 0 0.2" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo>
+    <plugin
+      filename="libgz-sim-diff-drive-system.so"
+      name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.44</wheel_separation>
+      <wheel_radius>0.1</wheel_radius>
+      <odom_publish_frequency>20</odom_publish_frequency>
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+    </plugin>
+
+    <plugin
+      filename="libgz-sim-joint-state-publisher-system.so"
+      name="gz::sim::systems::JointStatePublisher">
+      <topic>/world/empty/model/r2d2/joint_state</topic>
+      <joint_name>left_wheel_joint</joint_name>
+      <joint_name>right_wheel_joint</joint_name>
+    </plugin>
+    
+    <plugin
+      filename="libgz-sim-sensors-system.so"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+  </gazebo> 
+  
+  <gazebo reference="laser_link">
+    <sensor name='gpu_lidar' type='gpu_lidar'>
+        <pose relative_to='laser_link'>0 0 0 0 0 0</pose>
+        <topic>/scan</topic> <update_rate>10</update_rate>
+        <ray>
+            <scan>
+                <horizontal>
+                    <samples>640</samples>
+                    <resolution>1</resolution>
+                    <min_angle>-1.396263</min_angle>
+                    <max_angle>1.396263</max_angle>
+                </horizontal>
+            </scan>
+            <range>
+                <min>0.08</min>
+                <max>10.0</max>
+                <resolution>0.01</resolution>
+            </range>
+        </ray>
+        <always_on>1</always_on>
+        <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+  
+  <gazebo reference="camera_link">
+    <sensor name="camera" type="camera">
+      <camera>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>100</far>
+        </clip>
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>30</update_rate>
+      <visualize>true</visualize>
+      <topic>/camera/image_raw</topic> </sensor>
+  </gazebo>
 
 </robot>
