@@ -34,7 +34,7 @@ class Think_Node(Node):
         self.pub_tts = self.create_publisher(String, '/tts_command', 10)
 
         # LLM + agent
-        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, all_tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 
