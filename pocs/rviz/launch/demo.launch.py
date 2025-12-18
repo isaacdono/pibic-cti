@@ -6,7 +6,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    package_name = 'simulation' 
+    package_name = 'simulation'
     urdf_file_name = 'r2d2.urdf.xml'
     rviz_file_name = 'r2d2.rviz'
 
@@ -16,11 +16,10 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
-    # Lê o URDF para passar como string no parâmetro robot_description
     with open(urdf_path, 'r') as infp:
         robot_desc = infp.read()
 
-    # CORREÇÃO: Passando a string do URDF para o parâmetro correto
+    # 1. Robot State Publisher (Publica TFs estáticos e das juntas)
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -32,44 +31,13 @@ def generate_launch_description():
         }]
     )
 
-    # Inicia o Gazebo Sim (Mundo Vazio)
+    # 2. Gazebo Sim
     gazebo = ExecuteProcess(
-        cmd=['gz', 'sim', '-r', 'empty.sdf'], 
+        cmd=['gz', 'sim', '-r', 'empty.sdf'],
         output='screen'
     )
 
-    # Pontes (Bridges) - Adicionei CMD_VEL, SCAN e CAMERA
-    bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        arguments=[
-            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-            '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-            '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
-            '/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
-            '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'
-        ],
-        output='screen'
-    )
-
-    # Ponte para Joint States (conecta Gazebo -> ROS 2)
-    joint_state_bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        arguments=['/world/empty/model/r2d2/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model'],
-        output='screen'
-    )
-
-    # Joint State Publisher (usa os dados da ponte para publicar TFs das rodas)
-    joint_state_publisher_node = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        parameters=[{'use_sim_time': use_sim_time}],
-        remappings=[('/joint_states', '/world/empty/model/r2d2/joint_state')]
-    )
-
-    # Spawna o robô
+    # 3. Spawna o robô
     spawn_entity = Node(
         package='ros_gz_sim',
         executable='create',
@@ -77,6 +45,28 @@ def generate_launch_description():
         output='screen'
     )
 
+    # 4. Ponte ROS-Gazebo
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            # Relógio
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+            # Comandos de velocidade
+            '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+            # Laser Scan
+            '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            # Câmera
+            '/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
+            # Odometria (TF)
+            '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+            # Estados das Juntas (Para as rodas)
+            '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model'
+        ],
+        output='screen'
+    )
+
+    # 5. RViz
     rviz = Node(
         package='rviz2',
         executable='rviz2',
@@ -86,13 +76,31 @@ def generate_launch_description():
         parameters=[{'use_sim_time': use_sim_time}]
     )
 
+    # CORREÇÃO DEFINITIVA DE FRAME (GAMBIARRA PADRÃO)
+    # Diz ao ROS que o frame estranho do Gazebo é, na verdade, o nosso laser_link
+    # Args: x y z roll pitch yaw parent_frame child_frame
+    lidar_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'laser_link', 'r2d2/base_footprint/gpu_lidar'],
+        output='screen'
+    )
+
+    # Faça o mesmo para a câmera se necessário
+    camera_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'camera_link', 'r2d2/base_footprint/camera'],
+        output='screen'
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         gazebo,
         bridge,
         robot_state_publisher_node,
-        joint_state_bridge,
-        joint_state_publisher_node,
         spawn_entity,
-        rviz
+        rviz,
+        lidar_tf,
+        camera_tf
     ])
