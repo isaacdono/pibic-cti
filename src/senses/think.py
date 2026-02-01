@@ -34,7 +34,7 @@ class Think_Node(Node):
         self.pub_tts = self.create_publisher(String, '/tts_command', 10)
 
         # LLM + agent
-        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
         self.checkpointer = InMemorySaver()
         self.agent = create_agent(self.llm, all_tools, system_prompt=SYSTEM_PROMPT, checkpointer=self.checkpointer)
 
@@ -59,38 +59,69 @@ class Think_Node(Node):
             # 2. Verifica se a LLM pediu para usar a ferramenta de visão
             last_message = result["messages"][-1]
             if last_message.tool_calls and any(tc["name"] == "get_current_view" for tc in last_message.tool_calls):
-                self.get_logger().info("Agente solicitou 'get_current_view'. Executando manualmente.")
+                self.get_logger().info("Agente solicitou 'get_current_view'. Processando imagem multimodal...")
                 
-                # --- INÍCIO DA CORREÇÃO ---
-                # Passa um timestamp como argumento para evitar o cache.
+                # Passa um timestamp para evitar cache e força leitura de imagem fresca
                 tool_input = {"cache_buster": str(time.time())}
-                image_bytes = get_current_view.invoke(tool_input)
-                # --- FIM DA CORREÇÃO ---
+                tool_result = get_current_view.invoke(tool_input)
                 
-                tool_messages = []
-                if isinstance(image_bytes, bytes):
-                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-                    
-                    tool_content = [
-                        {"type": "text", "text": "A imagem foi capturada com sucesso. Por favor, descreva-a."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
-                    ]
-                    
-                    tool_messages.append({
-                        "type": "tool", "name": "get_current_view", "content": tool_content,
-                        "tool_call_id": last_message.tool_calls[0]["id"],
-                    })
+                # Se a ferramenta retornou sucesso, a imagem já está em base64
+                if isinstance(tool_result, dict) and tool_result.get("status") == "success":
+                    try:
+                        image_base64 = tool_result.get("image_base64")
+                        
+                        # IMPORTANTE: Primeiro responde à tool call com sucesso
+                        tool_response = {
+                            "type": "tool",
+                            "name": "get_current_view",
+                            "content": "Imagem capturada com sucesso.",
+                            "tool_call_id": last_message.tool_calls[0]["id"],
+                        }
+                        
+                        # Depois adiciona a imagem como uma nova mensagem do usuário
+                        messages_with_tool_and_image = result["messages"] + [
+                            tool_response,
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": "Aqui está a imagem que você solicitou. Descreva o que você vê:"},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                                ]
+                            }
+                        ]
+                        
+                        self.get_logger().info(f"Imagem adicionada como mensagem do usuário ({len(image_base64)} chars)")
+                        
+                        result = self.agent.invoke(
+                            {"messages": messages_with_tool_and_image},
+                            config={"configurable": {"thread_id": "main"}}
+                        )
+                        
+                    except Exception as e:
+                        self.get_logger().error(f"Erro ao processar imagem: {e}")
+                        # Em caso de erro, responde normalmente à tool call
+                        tool_response = {
+                            "type": "tool",
+                            "name": "get_current_view",
+                            "content": f"Erro ao processar imagem: {e}",
+                            "tool_call_id": last_message.tool_calls[0]["id"],
+                        }
+                        messages_with_error = result["messages"] + [tool_response]
+                        result = self.agent.invoke(
+                            {"messages": messages_with_error},
+                            config={"configurable": {"thread_id": "main"}}
+                        )
                 else:
-                    tool_messages.append({
-                        "type": "tool", "name": "get_current_view", "content": image_bytes,
+                    # Se houve erro na captura, responde à tool call com erro
+                    tool_response = {
+                        "type": "tool",
+                        "name": "get_current_view",
+                        "content": tool_result.get("message", "Erro desconhecido ao capturar visão."),
                         "tool_call_id": last_message.tool_calls[0]["id"],
-                    })
-
-                # 3. Segunda Invocação
-                if tool_messages:
-                    messages_with_tool_results = result["messages"] + tool_messages
+                    }
+                    messages_with_error = result["messages"] + [tool_response]
                     result = self.agent.invoke(
-                        {"messages": messages_with_tool_results},
+                        {"messages": messages_with_error},
                         config={"configurable": {"thread_id": "main"}}
                     )
 
