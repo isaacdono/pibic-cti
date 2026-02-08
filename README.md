@@ -59,7 +59,8 @@ GOOGLE_API_KEY="sua-chave-aqui"
 
 ## Como Executar (Passo a Passo)
 
-A execução do sistema é **modular**. Você precisará de múltiplos terminais. Lembre-se de sempre ativar o ambiente uv, `source .venv/bin/activate`, e carregar o ambiente do ROS 2 (`source /opt/ros/jazzy/setup.bash`)em cada um.
+A execução do sistema é **modular**. Você precisará de múltiplos terminais tanto para a aplicação, como para o ROS2. Lembre-se de sempre ativar o ambiente uv, `source .venv/bin/activate`, e carregar o ambiente do ROS 2 (`source /opt/ros/jazzy/setup.bash`)em cada um.
+No caso da aplicação, use os comandos na raíz `uv run -m src.senses.talk`, `uv run -m src.senses.think` e `uv run -m src.senses.vision` para ativar os sentidos e raciocínio. No caso dos terminais para o ROS2, segue o passo-a-passo.
 
 
 ### Terminal 1: RViz
